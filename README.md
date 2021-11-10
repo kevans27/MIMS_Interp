@@ -5,4 +5,6 @@ MIMS_no_raw.R uses the given excel sheet only
 
 The code runs in R, with the library 'readxl'
 
+The provided excel sheet is a template for MIMS runs. It can be run with the provided .csv raw file to test out code once you've downloaded everything. All files (the desired R script, the gas_functions R script, and your excel/csv files) should be stored in the same folder.
+
 Any questions, comments, concerns, feature requests, please email evans.kate27@gmail.com
