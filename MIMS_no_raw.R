@@ -11,9 +11,11 @@
 library(readxl)
 
 
-######EDIT THESE
-MIMSdata <- "2019_06_11_10m_LD.xlsx"
+######EDIT THESE, and be sure to comment out the pressure line that is wrong for you (whether your pressure is in inHg or mmHg). It currently runs for inHg of pressure.
+MIMSdata <- "2020_11_02_FMP.xlsx"
 saveFile <- "2020_11_02_FMP_final_noraw.csv"
+pressure <- "inHg"
+#pressure <- "mmHg"
 source("mims_gas_functions.r")
 ######EDIT THESE
 #
@@ -35,8 +37,14 @@ gather_data <- function(excelfile){
     #Sneak in the inHg to mmHg correction
     newdat <- data.frame(lapply(colMeans(data), type.convert), stringsAsFactors=FALSE)
     newdat$Time <- as.POSIXct(newdat$Time, origin = "1970-01-01")
+    options(warn = -1)
     temp <- mean(sub$Temp)
-    press <- mean(sub$Pressure) * 25.4
+    if (pressure == "inHg"){
+      press <- mean(sub$Pressure) * 25.4
+    } else if (pressure == "mmHg"){
+      press <- mean(sub$Pressure)} else{
+        print("Choose your pressure setting at the beginning of the code")
+      }
     metadat <- data.frame("Samp" = sub[["Samp"]][1], "SampleID" = sub[["SampleID"]][1], 
                           "Pressure" = press, "Temp" = temp, 
                           "Calibnum" = sub[["Calibnum"]][1],
@@ -45,7 +53,9 @@ gather_data <- function(excelfile){
                           "N2Sat" = nsat(temp, press), "ArSat" = arsat(temp, press), 
                           "O2.ArSat" = osat1(temp, press)/arsat(temp, press),
                           "N2.ArSat" = nsat(temp, press)/arsat(temp, press))
-    
+ 
+    options(warn = 0)
+       
     metadat$Calibnum[is.na(metadat$Calibnum)] <- 
       as.numeric(as.character(sub[["Sampnum"]][1][is.na(sub[["Calibnum"]][1])]))
     
@@ -77,7 +87,7 @@ getRatioGeneral <- function(df, targCol, satCol){
     for (i in 1:length(unique(df$Calibnum))){
       sub <- df[df$Calibnum == i | df$Calibnum == i+1,]
       
-      calibs <- sub[sub$Depth == "Stdl" | sub$Depth == "Stdh",]
+      calibs <- sub[grep("std", tolower(sub$SampleID)),]
       #Linear between low and high temps
       offsetfun <- lm(calibs[[satCol]] ~ 
                         calibs[, which(!is.na(match(tolower(colnames(calibs)), 
@@ -111,7 +121,7 @@ getRatioO2Ar <- function(df){
     for (i in 1:length(unique(df$Calibnum))){
       sub <- df[df$Calibnum == i | df$Calibnum == i+1,]
       
-      calibs <- sub[sub$Depth == "Stdl" | sub$Depth == "Stdh",]
+      calibs <- sub[grep("std", tolower(sub$SampleID)),]
       #Linear between 0 and all temps
       yvals <- c(0, calibs[, which(!is.na(match(tolower(colnames(calibs)), 
                                                 tolower("O2.ArSat"))))])
@@ -145,12 +155,12 @@ getRatio29.28 <- function(df){
     for (i in 1:length(unique(df$Calibnum))){
       sub <- df[df$Calibnum == i | df$Calibnum == i+1,]
       
-      calibs <- sub[sub$Depth == "Stdl" | sub$Depth == "Stdh",]
+      calibs <- sub[grep("std", tolower(sub$SampleID)),]
       #Linear between 0 and all temps
       stdVals <- calibs[, which(!is.na(match(tolower(colnames(calibs)), 
                                              tolower("X29.28"))))]
       Rstd <- mean(stdVals)
-
+      
       #Multiply currents
       sub[[newcolname]] <- (sub[, which(!is.na(match(tolower(colnames(sub)), 
                                                      tolower("X29.28"))))]/Rstd - 1)*1000
@@ -189,7 +199,7 @@ failTargs <- c(failTargs, allResults[[3]])
 #Reorders columns (Misc sample info, current values, saturation values, concentration values)
 concentrations <- grep("Conc|del", colnames(avgdData))
 saturations <- grep("Sat", colnames(avgdData))
-others <- grep("Conc|Sat|del|Wat|Time|Samp", colnames(avgdData), invert = TRUE)
+others <- grep("Conc|Sat|del|Wat|Time", colnames(avgdData), invert = TRUE)
 avgdData <- avgdData[, c(others, saturations, concentrations)]
 
 #Saves data to a csv file
@@ -198,7 +208,7 @@ write.csv(avgdData, saveFile, quote = FALSE)
 failTargs <- failTargs[!is.na(failTargs)]
 successTargs <- successTargs[!is.na(successTargs)]
 
-print(paste0("Program run successfully for ", 
+print(paste0("Program ran successfully for ", 
              paste(unlist(successTargs), collapse = ", "), 
              "."), quote = FALSE)
 print(paste0("Saved to ", saveFile, "."), quote = FALSE)

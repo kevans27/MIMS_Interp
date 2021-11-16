@@ -10,10 +10,12 @@
 ###Column names are not case sensitive
 library(readxl)
 
-######EDIT THESE
+######EDIT THESE, and be sure to comment out the pressure line that is wrong for you (whether your pressure is in inHg or mmHg). It currently runs for inHg of pressure.
 MIMSdata <- "2020_11_02_FMP.xlsx"
 rawFile <- "2020_11_05a.csv"
 saveFile <- "2020_11_02_FMP_final.csv"
+pressure <- "inHg"
+#pressure <- "mmHg"
 source("mims_gas_functions.r")
 ######EDIT THESE
 #
@@ -24,13 +26,16 @@ source("mims_gas_functions.r")
 read_raw_file <- function(filePath){
   nCols <- max(count.fields(filePath, sep = ','))
   firstRead <- read.csv(filePath, header = FALSE, col.names = paste0("V",seq_len(nCols)), 
-                        fill = TRUE)
-  truthVector <- cumsum(complete.cases(firstRead)) != 0
-  skipRows <- length(truthVector[truthVector == FALSE])
+                        fill = TRUE, stringsAsFactors = FALSE)
+  trimmedRead <- firstRead[cumsum(complete.cases(firstRead)) != 0,]
+  header <- as.character(trimmedRead[1,])
+  colnames(trimmedRead) <- header
+  trimmedRead <- trimmedRead[-1,]
   
-  filedf <- read.csv(filePath, skip = skipRows+1)
-  range <- c(min(filedf$Index), max(filedf$Index))
-  return(list(filedf, range))
+  trimmedRead$Index <- as.numeric(as.character(trimmedRead$Index))
+  
+  range <- c(min(trimmedRead$Index), max(trimmedRead$Index))
+  return(list(trimmedRead, range))
 }
 
 #Averages data from the raw document
@@ -56,11 +61,18 @@ gather_data <- function(excelfile, folder_with_raw_files){
     data <- data[ , -which(names(data) %in% c("Index"))]
     data$Time <- as.numeric(as.POSIXct(data$Time, format = "%m/%d/%Y %H:%M:%S"))
     
+    data[] <- lapply(data, as.numeric)
+    
     #Sneak in the inHg to mmHg correction
     newdat <- data.frame(lapply(colMeans(data), type.convert), stringsAsFactors=FALSE)
     newdat$Time <- as.POSIXct(newdat$Time, origin = "1970-01-01")
+    options(warn = -1)
     temp <- mean(sub$Temp)
-    press <- mean(sub$Pressure) * 25.4
+    if (pressure == "inHg"){
+      press <- mean(sub$Pressure) * 25.4
+    } else if (pressure == "mmHg"){
+      press <- mean(sub$Pressure)}
+    else{print("Choose your pressure setting at the beginning of the code")}
     metadat <- data.frame("Samp" = sub[["Samp"]][1], "SampleID" = sub[["SampleID"]][1], 
                           "Pressure" = press, "Temp" = temp, 
                           "Calibnum" = sub[["Calibnum"]][1],
@@ -69,6 +81,8 @@ gather_data <- function(excelfile, folder_with_raw_files){
                           "N2Sat" = nsat(temp, press), "ArSat" = arsat(temp, press), 
                           "O2.ArSat" = osat1(temp, press)/arsat(temp, press),
                           "N2.ArSat" = nsat(temp, press)/arsat(temp, press))
+    
+    options(warn = 0)
     
     metadat$Calibnum[is.na(metadat$Calibnum)] <- 
       as.numeric(as.character(sub[["Sampnum"]][1][is.na(sub[["Calibnum"]][1])]))
@@ -101,7 +115,7 @@ getRatioGeneral <- function(df, targCol, satCol){
     for (i in 1:length(unique(df$Calibnum))){
       sub <- df[df$Calibnum == i | df$Calibnum == i+1,]
       
-      calibs <- sub[sub$Depth == "Stdl" | sub$Depth == "Stdh",]
+      calibs <- sub[grep("std", tolower(sub$SampleID)),]
       #Linear between low and high temps
       offsetfun <- lm(calibs[[satCol]] ~ 
                         calibs[, which(!is.na(match(tolower(colnames(calibs)), 
@@ -135,7 +149,7 @@ getRatioO2Ar <- function(df){
     for (i in 1:length(unique(df$Calibnum))){
       sub <- df[df$Calibnum == i | df$Calibnum == i+1,]
       
-      calibs <- sub[sub$Depth == "Stdl" | sub$Depth == "Stdh",]
+      calibs <- sub[grep("std", tolower(sub$SampleID)),]
       #Linear between 0 and all temps
       yvals <- c(0, calibs[, which(!is.na(match(tolower(colnames(calibs)), 
                                                 tolower("O2.ArSat"))))])
@@ -169,7 +183,7 @@ getRatio29.28 <- function(df){
     for (i in 1:length(unique(df$Calibnum))){
       sub <- df[df$Calibnum == i | df$Calibnum == i+1,]
       
-      calibs <- sub[sub$Depth == "Stdl" | sub$Depth == "Stdh",]
+      calibs <- sub[grep("std", tolower(sub$SampleID)),]
       #Linear between 0 and all temps
       stdVals <- calibs[, which(!is.na(match(tolower(colnames(calibs)), 
                                              tolower("X29.28"))))]
@@ -213,7 +227,7 @@ failTargs <- c(failTargs, allResults[[3]])
 #Reorders columns (Misc sample info, current values, saturation values, concentration values)
 concentrations <- grep("Conc|del", colnames(avgdData))
 saturations <- grep("Sat", colnames(avgdData))
-others <- grep("Conc|Sat|del|Wat|Time|Samp", colnames(avgdData), invert = TRUE)
+others <- grep("Conc|Sat|del|Wat|Time", colnames(avgdData), invert = TRUE)
 avgdData <- avgdData[, c(others, saturations, concentrations)]
 
 #Saves data to a csv file
@@ -222,7 +236,7 @@ write.csv(avgdData, saveFile, quote = FALSE)
 failTargs <- failTargs[!is.na(failTargs)]
 successTargs <- successTargs[!is.na(successTargs)]
 
-print(paste0("Program run successfully for ", 
+print(paste0("Program ran successfully for ", 
              paste(unlist(successTargs), collapse = ", "), 
              "."), quote = FALSE)
 print(paste0("Saved to ", saveFile, "."), quote = FALSE)
