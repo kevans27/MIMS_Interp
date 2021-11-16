@@ -5,4 +5,12 @@ MIMS_no_raw.R uses the given excel sheet only
 
 The code runs in R, with the library 'readxl'
 
-Any questions, comments, concerns, feature requests, please email evans.kate27@gmail.com
+The provided excel sheet is a template for MIMS runs. It can be run with the provided .csv raw file to test out code once you've downloaded everything. All files (the desired R script, the gas_functions R script, and your excel/csv files) should be stored in the same folder.
+
+The code calculates currents for N2:Ar (column labeled N2.Ar), O2:Ar (O2.Ar), Ar (X40), O2 (X32), N2 (X28), and 29:28 (X29.28). It can be easily modified to add additional gases by including their concentration functions in the gas_functions sheet and modifying the targCols and satCols lists in the MIMS_*.R lists. Any missing columns will not be run and a warning will be given, but the code will run as expected.
+
+Data will be saved to a csv file ('saveFile').
+
+Please open up the desired R script once downloaded and update the 'MIMSdata', 'rawFile', and 'saveFile' lines as needed.
+
+Any questions, comments, concerns, feature requests, please email evans.kate27@gmail.com 
