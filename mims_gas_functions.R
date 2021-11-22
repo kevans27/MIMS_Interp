@@ -39,7 +39,7 @@ bpcalc(29.92, 2400)
 ###########################################	
 
 ### Water density of air saturated water given water temperature in degC.  
-### Source: Paterson and Morris 1994, Meterologia
+### Source: Patterson and Morris 1994, Metrologia
 
 watdens<-function(temp){
 	
@@ -80,7 +80,7 @@ osat1<- function(temp, bp) {
 	a5<-3.88767
 	
 	u<-10^(8.10765-(1750.286/(235+temp)))
-	sato<-(exp(a0 + a1*ts + a2*ts^2 + a3*ts^3 + a4*ts^4)+a5*ts^5)*((bp-u)/(760-u))
+	sato<-(exp(a0 + a1*ts + a2*ts^2 + a3*ts^3 + a4*ts^4+a5*ts^5))*((bp-u)/(760-u))
 	watdens(temp)*sato*(31.9988/1000)##converts umol/kg to mg/L
 	
 	}
