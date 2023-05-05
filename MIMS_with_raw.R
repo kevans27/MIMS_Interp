@@ -117,16 +117,14 @@ getRatioGeneral <- function(df, targCol, satCol){
       
       calibs <- sub[grep("std", tolower(sub$SampleID)),]
       #Linear between low and high temps
-      offsetfun <- lm(calibs[[satCol]] ~ 
-                        calibs[, which(!is.na(match(tolower(colnames(calibs)), 
-                                                    tolower(targCol))))])
+      offsetfun <- lm(calibs[, which(!is.na(match(tolower(colnames(calibs)), 
+                                                  tolower(targCol))))] ~ calibs[[satCol]])
       coeff1 <- coef(summary(offsetfun))[1]
       coeff2 <- coef(summary(offsetfun))[2]
       
       #Multiply currents
-      sub[[newcolname]] <- 
-        coeff1 + sub[, which(!is.na(match(tolower(colnames(sub)), 
-                                          tolower(targCol))))]*coeff2
+      sub[[newcolname]] <- (sub[, which(!is.na(match(tolower(colnames(sub)), 
+                                                     tolower(targCol))))] - coeff1) / coeff2
       
       df[[newcolname]][!is.na(base::match(df$Samp, sub$Samp))]<- sub[[newcolname]]
     }
@@ -151,17 +149,17 @@ getRatioO2Ar <- function(df){
       
       calibs <- sub[grep("std", tolower(sub$SampleID)),]
       #Linear between 0 and all temps
-      yvals <- c(0, calibs[, which(!is.na(match(tolower(colnames(calibs)), 
-                                                tolower("O2.ArSat"))))])
       xvals <- c(0, calibs[, which(!is.na(match(tolower(colnames(calibs)), 
+                                                tolower("O2.ArSat"))))])
+      yvals <- c(0, calibs[, which(!is.na(match(tolower(colnames(calibs)), 
                                                 tolower("O2.Ar"))))])
       offsetfun <- lm(yvals ~ xvals)
       coeff1 <- coef(summary(offsetfun))[1]
       coeff2 <- coef(summary(offsetfun))[2]
       
       #Multiply currents
-      sub[[newcolname]] <- coeff1 + sub[, which(!is.na(match(tolower(colnames(sub)), 
-                                                             tolower("O2.Ar"))))]*coeff2
+      sub[[newcolname]] <- (sub[, which(!is.na(match(tolower(colnames(sub)), 
+                                                             tolower("O2.Ar"))))] - coeff1) / coeff2
       
       df[[newcolname]][!is.na(base::match(df$Samp, sub$Samp))]<- sub[[newcolname]]
     }
