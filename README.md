@@ -13,8 +13,6 @@ Data will be saved to a csv file ('saveFile').
 
 Please open up the desired R script once downloaded and update the 'MIMSdata', 'rawFile', 'saveFile', and 'pressure' lines as needed.
 
-I run this in R version 3.6.2 (nicknamed 'Dark and Stormy Night'), usually in RStudio, version 1.2.5019. Barring drastic deviances, this should not matter, but please let me know what R version you are running if you are emailing me about a bug for my own sanity.
+I run this in R version 3.6.2 (nicknamed 'Dark and Stormy Night'), usually in RStudio, version 1.2.5019. Barring drastic deviances, this should not matter, but please let me know what R version you are running if you are emailing me about a bug.
 
 Any questions, comments, concerns, feature requests, please email evans.kate27@gmail.com 
-
-Thanks everybody!!
